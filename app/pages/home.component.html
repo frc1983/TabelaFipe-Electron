@@ -1,0 +1,22 @@
+<div class="container-fluid text-center">
+    <div class="col-lg-12">
+        <h1>
+            {{title}}
+        </h1>
+    </div>
+    <div class="col-lg-12">
+        <h4>
+            Consulta de dados da Fipe.
+        </h4>
+        <h4 class="red">{{errorMessage}}</h4>
+    </div>
+    
+    <div *ngIf="!loading" class="col-lg-12">
+        <button class="btn btn-primary btn-lg" (click)="iniciarBuscas()">Obter Dados</button>
+        <button class="btn btn-primary btn-lg" (click)="carregarVeiculos()">Carregar Veiculos</button>
+    </div>
+    <div class="col-lg-12">
+        <h6 *ngFor="let msg of infoMessage">{{msg}}</h6>
+        <img *ngIf="loading" class="loader" src="app/Images/loader.gif" />
+    </div>
+</div>
