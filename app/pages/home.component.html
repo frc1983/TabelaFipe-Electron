@@ -12,11 +12,18 @@
     </div>
     
     <div *ngIf="!loading" class="col-lg-12">
-        <button class="btn btn-primary btn-lg" (click)="iniciarBuscas()">Obter Dados</button>
-        <button class="btn btn-primary btn-lg" (click)="carregarVeiculos()">Carregar Veiculos</button>
+        <button *ngIf="!showObterVeiculosButton && !showObterDadosBasicosButton" class="btn btn-primary btn-lg" (click)="carregarDados()">Carregar Dados</button>
+        <button *ngIf="showObterDadosBasicosButton" class="btn btn-primary btn-lg" (click)="iniciarBuscas()">Obter Dados</button>
+        <button *ngIf="showObterVeiculosButton" class="btn btn-primary btn-lg" (click)="carregarVeiculos()">Carregar Veiculos</button>
     </div>
     <div class="col-lg-12">
         <h6 *ngFor="let msg of infoMessage">{{msg}}</h6>
         <img *ngIf="loading" class="loader" src="app/Images/loader.gif" />
+    </div>
+    <div class="col-lg-12">
+        <input type="text" [(ngModel)]="queryMin" placeholder="Valor Mínimo" />
+        <input type="text" [(ngModel)]="queryMax" placeholder="Valor Máximo" /> 
+        <button class="btn btn-primary btn-lg" (click)="filtrar()">Buscar Veículos</button>
+        <h6 *ngFor="let veic of arrayListaFiltrada">{{veic.marca}} - {{veic.modelo}} - {{veic.valor | currency:'BRL':true:'1.2-3'}}</h6>
     </div>
 </div>

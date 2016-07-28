@@ -10,15 +10,20 @@ if (!nosql.isReady) {
 }
 
 app.on('ready', function () {
-  let mainWindow = new BrowserWindow({width: 1235, height: 670})
+  let mainWindow = new electron.BrowserWindow({width: 1235, height: 670})
   mainWindow.loadURL(`file://${__dirname}/index.html`);
 
   // Connect to server process
-  client.create(mainWindow);
   mainWindow.webContents.openDevTools()
 	mainWindow.maximize();
   
   mainWindow.on('closed', function () {
     mainWindow = null
   });
+});
+
+app.on('window-all-closed', () => {
+	if (process.platform !== 'darwin') {
+		app.quit();
+	}
 });

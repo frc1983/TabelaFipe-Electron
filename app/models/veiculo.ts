@@ -9,7 +9,7 @@ export class Veiculo {
   tipoVeiculo: number;
 
   constructor(obj: any) {
-    this.valor = parseFloat(obj.Valor.replace("R$ ", ""));
+    this.valor = parseFloat(obj.Valor.replace("R$ ", "").replace(".", "").replace(".", "").replace(",", "."));
     this.marca = obj.Marca;
     this.modelo = obj.Modelo;
     this.anoModelo = obj.AnoModelo;

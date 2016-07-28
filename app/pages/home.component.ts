@@ -1,4 +1,4 @@
-import { Component } from '@angular/core';
+import { Component, AfterViewChecked } from '@angular/core';
 import { ROUTER_DIRECTIVES, Router } from '@angular/router';
 import 'rxjs/Rx';
 import {Observable} from 'rxjs/Observable';
@@ -27,12 +27,19 @@ export class HomeComponent {
 	arrayTiposVeiculo: Array<string>;
 	arrayMarcas: Array<Array<Marca>>;
 	arrayLista: Array<Veiculo>;
+	arrayListaFiltrada: Array<Veiculo>;
 
     marcasCarros: Array<Marca>;
     marcasMotos: Array<Marca>;
     marcasCaminhoes: Array<Marca>;
 
 	indexMarcaConsulta = 0;
+
+	showObterVeiculosButton: boolean;
+	showObterDadosBasicosButton: boolean;
+
+	queryMax: string;
+	queryMin: string;
 
     constructor(_router: Router,
 		private _consultaService: FipeService) {
@@ -48,9 +55,56 @@ export class HomeComponent {
 		this.arrayMarcas.push(this.marcasCaminhoes);
 
 		this.arrayLista = new Array();
+		this.arrayListaFiltrada = new Array();
 
 		this.arrayTiposVeiculo = ["Carro", "Moto", "Caminhao"];
+
+		this.showObterVeiculosButton = false;
+		this.showObterDadosBasicosButton = false;
+
+		this.queryMin = "";
+		this.queryMax = "";
     }
+
+	carregarDados() {
+		this.showObterVeiculosButton = false;
+		this.showObterDadosBasicosButton = false;
+
+		let temDadosBasicos = this.obterDadosBasicosNoSQL();
+		let temVeiculos = this.obterDadosVeiculosNoSQL();
+
+		if (!temDadosBasicos && !temVeiculos) {
+			this.showObterDadosBasicosButton = true;
+			this.showObterVeiculosButton = false;
+		}
+		else if (temDadosBasicos && !temVeiculos) {
+			this.showObterDadosBasicosButton = false;
+			this.showObterVeiculosButton = true;
+		}
+	}
+
+	filtrar() {
+		if (this.queryMin == '')
+			this.errorMessage = "Deve ser informado o valor mínimo da busca.";
+		else if (this.queryMax == '')
+			this.errorMessage = "Deve ser informado o valor máximo da busca.";
+		else {
+			this.arrayListaFiltrada = new Array();
+			this.arrayLista.forEach(veiculo => {
+				if (veiculo.valor >= parseFloat(this.queryMin) && veiculo.valor <= parseFloat(this.queryMax))
+					this.arrayListaFiltrada.push(veiculo)
+			});
+			this.arrayLista.sort((a: Veiculo, b: Veiculo) => {
+				if (a.valor < b.valor) {
+					return -1;
+				} else if (a.valor > b.valor) {
+					return 1;
+				} else {
+					return 0;
+				}
+			});
+		}
+	}
 
 	iniciarBuscas() {
 		this.indexTipoVeiculo = 1;
@@ -62,28 +116,48 @@ export class HomeComponent {
 		this.indexTipoVeiculo = 1;
 		this.indexMarcaConsulta = 0;
 		this.errorMessage = "";
-		
+
 		if (!this.obterDadosBasicosNoSQL())
 			return;
 
 		this.getAllVeiculos(this.arrayMarcas[this.indexTipoVeiculo - 1]);
 	}
-	
-	obterDadosBasicosNoSQL(){
-		if(nosql.custom().dadosBasicos.length == 0){
+
+	obterDadosBasicosNoSQL() {
+		if (nosql.custom() == null || nosql.custom().dadosBasicos == undefined)
+			return false;
+
+		if (nosql.custom().dadosBasicos.length == 0) {
 			this.errorMessage = "Não existem dados básicos no NoSQL!";
 			return false;
 		}
-		
+
 		this.arrayMarcas[0] = nosql.custom().dadosBasicos[0].carros;
 		this.arrayMarcas[1] = nosql.custom().dadosBasicos[1].motos;
 		this.arrayMarcas[2] = nosql.custom().dadosBasicos[2].caminhoes;
-		
+
 		if (this.arrayMarcas[0].length == 0 && this.arrayMarcas[1].length == 0 && this.arrayMarcas[2].length == 0) {
 			this.errorMessage = "Não existem dados básicos carregados!";
 			return false;
 		}
-		
+		this.exibeResultadosDadosBasicos();
+
+		return true;
+	}
+
+	obterDadosVeiculosNoSQL() {
+		if (nosql.custom() == null || nosql.custom().veiculos == undefined)
+			return false;
+
+		if (nosql.custom().veiculos.length == 0) {
+			this.errorMessage = "Não existem veículos no NoSQL!";
+			return false;
+		}
+
+		this.arrayLista = nosql.custom().veiculos;
+
+		this.exibeResultadosVeiculos();
+
 		return true;
 	}
 
@@ -104,6 +178,8 @@ export class HomeComponent {
 		} else {
 			this.exibeResultadosDadosBasicos();
 			this.persisteDadosBasicos();
+			this.showObterVeiculosButton = true;
+			this.showObterDadosBasicosButton = false;
 		}
     }
 
@@ -165,7 +241,7 @@ export class HomeComponent {
 			observableBatch
 		).subscribe(
 			veiculo => {
-				this.getStatus(["Obtendo veículos", "Marca: " + lista[this.indexMarcaConsulta].nome])
+				this.getStatus(["Obtendo veículos: " + this.arrayTiposVeiculo[this.indexTipoVeiculo - 1], "Marca: " + lista[this.indexMarcaConsulta].nome])
 				if (this.arrayMarcas.length >= this.indexTipoVeiculo && lista.length - 1 == this.indexMarcaConsulta + 1)
 					this.indexTipoVeiculo++;
 
@@ -178,12 +254,15 @@ export class HomeComponent {
 					this.getAllVeiculos(this.arrayMarcas[this.indexTipoVeiculo - 1]);
 				} else {
 					this.loading = false;
+					this.persisteVeiculos();
 					this.getStatus(["Veículos carregados com sucesso", ""]);
 					this.exibeResultadosVeiculos();
+					this.showObterVeiculosButton = false;
+					this.showObterDadosBasicosButton = false;
 				}
 			},
 			err => {
-				this.onError("Erro ao obter veículos")
+				this.onError("Erro ao obter veículos " + lista[this.indexMarcaConsulta].nome)
 			});
 	}
 
@@ -237,21 +316,24 @@ export class HomeComponent {
 
 	getVeiculos(codTipoVeiculo: number, codMarca: number, codModelo: number, ano: number): Promise<any> {
 		return new Promise<any>((resolve, reject) => {
-			this._consultaService.getVeiculoFipe(codTipoVeiculo, codMarca, codModelo, parseInt(ano.toString().split("-")[0]), parseInt(ano.toString().split("-")[1]), this.arrayTiposVeiculo[this.indexTipoVeiculo - 1].toLowerCase())
-				.subscribe(
-				veiculo => {
-					this.arrayLista.push(veiculo);
-					resolve(veiculo);
-				},
-				error => {
-					this.errorMessage = <any>error;
-					this.onError("Erro ao obter veiculos");
-					reject(null)
-				});
+			setTimeout(() => {
+				this._consultaService.getVeiculoFipe(codTipoVeiculo, codMarca, codModelo, parseInt(ano.toString().split("-")[0]), parseInt(ano.toString().split("-")[1]), this.arrayTiposVeiculo[this.indexTipoVeiculo - 1].toLowerCase())
+					.subscribe(
+					veiculo => {
+						this.arrayLista.push(veiculo);
+						resolve(veiculo);
+					},
+					error => {
+						this.errorMessage = <any>error;
+						this.onError("Erro ao obter veiculos " + codTipoVeiculo + " " + codMarca + " " + codModelo + " " + ano.toString().split("-")[0] + " " + ano.toString().split("-")[1] + " " + this.arrayTiposVeiculo[this.indexTipoVeiculo - 1].toLowerCase());
+						reject(null)
+					});
+			}, 1000);
 		});
 	}
 
 	exibeResultadosVeiculos() {
+		console.log("Total de veículos:", this.arrayLista.length);
 		console.log("Lista de veículos:", this.arrayLista);
 	}
 
@@ -281,16 +363,18 @@ export class HomeComponent {
 		console.log("Total de modelos:", countModelos);
 		console.log("Total de anos:", countAnos);
 	}
-	
-	persisteDadosBasicos(){
-		nosql.custom({ dadosBasicos: [
-			{ carros: this.arrayMarcas[0] },
-			{ motos: this.arrayMarcas[1] },
-			{ caminhoes: this.arrayMarcas[2] }
-		]})
+
+	persisteDadosBasicos() {
+		nosql.custom({
+			dadosBasicos: [
+				{ carros: this.arrayMarcas[0] },
+				{ motos: this.arrayMarcas[1] },
+				{ caminhoes: this.arrayMarcas[2] }
+			]
+		})
 	}
-	
-	persisteVeiculos(){
+
+	persisteVeiculos() {
 		nosql.custom({ veiculos: this.arrayLista });
 	}
 

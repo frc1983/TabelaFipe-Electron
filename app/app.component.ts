@@ -1,5 +1,5 @@
 import { Component } from '@angular/core';
-import { ROUTER_DIRECTIVES } from '@angular/router';
+import { ROUTER_DIRECTIVES, Router } from '@angular/router';
 import { BaseService } from './services/base.service';
 import { FipeService } from './services/fipe.service';
 
@@ -12,4 +12,13 @@ import { FipeService } from './services/fipe.service';
 })
 export class AppComponent {
   title = 'app works!';
+  router: Router;
+  
+  constructor(_router: Router){
+    this.router = _router;
+  }
+  
+  ngOnInit(){
+    this.router.navigate(["/home"]);
+  }
 }
